@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TactiTrack — Secure Login</title>
+  <link rel="stylesheet" href="index.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;500;700&family=Exo+2:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #040c16;
+      --panel:   #060e1a;
+      --card:    #0a1628;
+      --border:  #1a3a5c;
+      --accent:  #4ab8ff;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --amber:   #f59e0b;
+      --text:    #c8d8e8;
+      --muted:   #6a8aaa;
+      --dim:     #3a5a7a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; background: var(--bg);
+      font-family: 'Exo 2', sans-serif;
+      color: var(--text); overflow: hidden;
+    }
+ 
+    /* grid background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(74,184,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,184,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+ 
+    /* scanlines */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px
+      );
+    }
+ 
+    .page {
+      position: relative; z-index: 1;
+      height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 32px; padding: 20px;
+    }
+ 
+    /* top bar */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 44px; background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; z-index: 10;
+    }
+    .logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 14px; font-weight: 700;
+      color: var(--accent); letter-spacing: 4px;
+    }
+    .top-status {
+      display: flex; gap: 16px; align-items: center;
+    }
+    .tpill {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px; letter-spacing: 1px;
+      padding: 3px 10px; border-radius: 2px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .tpill.green { background: #0a1e10; border: 1px solid #1a4a2a; color: var(--green); }
+    .tpill.amber { background: #1a1208; border: 1px solid #4a3010; color: var(--amber); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .dot.green { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .dot.amber { background: var(--amber); box-shadow: 0 0 5px var(--amber); animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    .clock { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--accent); }
+ 
+    /* header */
+    .header { text-align: center; }
+    .header-mark {
+      font-size: 36px; color: var(--accent); line-height: 1;
+      margin-bottom: 8px;
+    }
+    .header-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 28px; font-weight: 700;
+      color: var(--accent); letter-spacing: 6px;
+    }
+    .header-sub {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; color: var(--muted);
+      letter-spacing: 3px; margin-top: 4px;
+    }
+    .header-line {
+      width: 200px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      margin: 12px auto 0;
+    }
+ 
+    /* card */
+    .login-card {
+      width: 100%; max-width: 400px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .card-head {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-head-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .card-head-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; letter-spacing: 2px; color: var(--muted);
+    }
+    .card-body { padding: 24px 20px; }
+ 
+    /* role selector */
+    .role-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      color: var(--dim); margin-bottom: 8px;
+    }
+    .role-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 20px;
+    }
+    .role-btn {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 3px; padding: 10px 8px;
+      cursor: pointer; transition: all 0.2s;
+      text-align: center;
+    }
+    .role-btn:hover { border-color: var(--accent); background: #0a1f2e; }
+    .role-btn.active { border-color: var(--accent); background: #0a1f2e; }
+    .role-btn.active .role-icon { color: var(--accent); }
+    .role-icon {
+      font-size: 18px; color: var(--dim);
+      margin-bottom: 4px; transition: color 0.2s;
+    }
+    .role-name {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px; letter-spacing: 1px; color: var(--text);
+    }
+    .role-desc {
+      font-size: 9px; color: var(--muted); margin-top: 1px;
+    }
+ 
+    /* inputs */
+    .field { margin-bottom: 14px; }
+    .field-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      color: var(--dim); margin-bottom: 5px; display: block;
+    }
+    .field input {
+      width: 100%; background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px; padding: 10px 12px;
+      border-radius: 2px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--dim); }
+ 
+    /* error */
+    .error-msg {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; color: var(--red);
+      background: #1a0808; border: 1px solid #3a1212;
+      border-radius: 2px; padding: 8px 10px;
+      margin-bottom: 14px; display: none;
+    }
+ 
+    /* submit */
+    .submit-btn {
+      width: 100%; background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'Orbitron', monospace;
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 3px; padding: 12px;
+      cursor: pointer; border-radius: 2px;
+      transition: all 0.2s; position: relative;
+      overflow: hidden;
+    }
+    .submit-btn:hover { background: #0a2a3a; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .submit-btn.loading::after {
+      content: '';
+      position: absolute; left: 0; top: 0;
+      height: 100%; width: 0%;
+      background: rgba(74,184,255,0.1);
+      animation: loadbar 1s forwards;
+    }
+    @keyframes loadbar { to { width: 100%; } }
+ 
+    /* demo credentials */
+    .demo-creds {
+      margin-top: 16px;
+      background: var(--card); border: 1px solid var(--border-dim, #0f2236);
+      border-radius: 3px; padding: 10px 12px;
+    }
+    .demo-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px; letter-spacing: 2px;
+      color: var(--dim); margin-bottom: 8px;
+    }
+    .demo-row {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 3px 0;
+      border-bottom: 1px solid #0f2236;
+      cursor: pointer;
+    }
+    .demo-row:last-child { border-bottom: none; }
+    .demo-row:hover .demo-user { color: var(--accent); }
+    .demo-user {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; color: var(--text); transition: color 0.2s;
+    }
+    .demo-pass { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); }
+    .demo-role-badge {
+      font-size: 8px; padding: 1px 6px; border-radius: 1px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .badge-cmd { background: #1a0a2a; border: 1px solid #4a2a7a; color: #a78bfa; }
+    .badge-op  { background: #0a1e10; border: 1px solid #1a4a2a; color: var(--green); }
+ 
+    /* security note */
+    .sec-note {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px; color: var(--dim);
+      text-align: center; letter-spacing: 1px;
+    }
+    .sec-note span { color: var(--green); }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">◈ TACTITRACK</div>
+    <div class="top-status">
+      <div class="tpill green"><div class="dot green"></div>SYSTEM ONLINE</div>
+      <div class="tpill amber"><div class="dot amber"></div>AWAITING AUTH</div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </div>
+ 
+  <div class="page">
+    <div class="header">
+      <div class="header-mark">◈</div>
+      <div class="header-title">TACTITRACK</div>
+      <div class="header-sub">COMMAND OPERATIONS SYSTEM · SECURE ACCESS</div>
+      <div class="header-line"></div>
+    </div>
+ 
+    <div class="login-card">
+      <div class="card-head">
+        <div class="card-head-dot"></div>
+        <div class="card-head-text">AUTHENTICATION REQUIRED · AES-256 ENCRYPTED</div>
+      </div>
+      <div class="card-body">
+        <div class="role-label">SELECT ROLE</div>
+        <div class="role-grid">
+          <div class="role-btn active" id="role-commander" onclick="selectRole('commander')">
+            <div class="role-icon">⬡</div>
+            <div class="role-name">COMMANDER</div>
+            <div class="role-desc">Full access</div>
+          </div>
+          <div class="role-btn" id="role-operator" onclick="selectRole('operator')">
+            <div class="role-icon">◈</div>
+            <div class="role-name">OPERATOR</div>
+            <div class="role-desc">Field access</div>
+          </div>
+        </div>
+ 
+        <div class="field">
+          <label class="field-label">USERNAME</label>
+          <input type="text" id="username" placeholder="Enter callsign..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label class="field-label">PASSWORD</label>
+          <input type="password" id="password" placeholder="••••••••" />
+        </div>
+ 
+        <div class="error-msg" id="errorMsg">⚠ AUTHENTICATION FAILED — Invalid credentials</div>
+ 
+        <button class="submit-btn" id="loginBtn" onclick="doLogin()">
+          AUTHENTICATE →
+        </button>
+ 
+        <div class="demo-creds">
+          <div class="demo-title">DEMO CREDENTIALS — CLICK TO FILL</div>
+          <div class="demo-row" onclick="fillCreds('commander','cmd@1234','commander')">
+            <span class="demo-user">commander</span>
+            <span class="demo-pass">cmd@1234</span>
+            <span class="demo-role-badge badge-cmd">COMMANDER</span>
+          </div>
+          <div class="demo-row" onclick="fillCreds('alpha1','alpha@1','operator')">
+            <span class="demo-user">alpha1</span>
+            <span class="demo-pass">alpha@1</span>
+            <span class="demo-role-badge badge-op">OPERATOR</span>
+          </div>
+          <div class="demo-row" onclick="fillCreds('bravo2','bravo@2','operator')">
+            <span class="demo-user">bravo2</span>
+            <span class="demo-pass">bravo@2</span>
+            <span class="demo-role-badge badge-op">OPERATOR</span>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="sec-note"><span>◈</span> CONNECTION SECURED · JWT TOKEN AUTH · ROLE-BASED ACCESS CONTROL</div>
+  </div>
+ 
+  <script>
+    // clock
+    function tick() {
+      const n = new Date();
+      const t = [n.getUTCHours(), n.getUTCMinutes(), n.getUTCSeconds()]
+        .map(v => String(v).padStart(2,'0')).join(':');
+      document.getElementById('clock').textContent = t + ' UTC';
+    }
+    tick(); setInterval(tick, 1000);
+ 
+    // role selection
+    let selectedRole = 'commander';
+    function selectRole(role) {
+      selectedRole = role;
+      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('role-' + role).classList.add('active');
+    }
+ 
+    // fill demo creds
+    function fillCreds(user, pass, role) {
+      document.getElementById('username').value = user;
+      document.getElementById('password').value = pass;
+      selectRole(role);
+    }
+ 
+    // login
+    async function doLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const btn      = document.getElementById('loginBtn');
+      const err      = document.getElementById('errorMsg');
+ 
+      if (!username || !password) {
+        err.style.display = 'block';
+        err.textContent = '⚠ Enter username and password';
+        return;
+      }
+ 
+      btn.disabled = true;
+      btn.classList.add('loading');
+      btn.textContent = 'AUTHENTICATING...';
+      err.style.display = 'none';
+ 
+      // Try real backend first, fall back to demo mode
+      try {
+        const res  = await fetch('http://localhost:4000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+          signal: AbortSignal.timeout(3000)
+        });
+        const data = await res.json();
+ 
+        if (res.ok && data.token) {
+          localStorage.setItem('tt_token', data.token);
+          localStorage.setItem('tt_user',  JSON.stringify(data.user));
+          redirectToDashboard(data.user);
+          return;
+        }
+        showError();
+      } catch {
+        // Backend not running — demo mode auth
+        const DEMO = {
+          commander: { pass: 'cmd@1234',  role: 'commander', name: 'Col. R.K. Sharma' },
+          alpha1:    { pass: 'alpha@1',   role: 'operator',  name: 'ALPHA-1 Operator' },
+          bravo2:    { pass: 'bravo@2',   role: 'operator',  name: 'BRAVO-2 Operator' },
+        };
+        const match = DEMO[username];
+        if (match && match.pass === password) {
+          const user = { username, role: match.role, name: match.name };
+          localStorage.setItem('tt_token', 'demo_token_' + Date.now());
+          localStorage.setItem('tt_user',  JSON.stringify(user));
+          redirectToDashboard(user);
+        } else {
+          showError();
+        }
+      }
+    }
+ 
+    function redirectToDashboard(user) {
+      document.getElementById('loginBtn').textContent = '✓ ACCESS GRANTED';
+      document.getElementById('loginBtn').style.borderColor = '#22c55e';
+      document.getElementById('loginBtn').style.color = '#22c55e';
+      setTimeout(() => { window.location.href = 'index.html'; }, 800);
+    }
+ 
+    function showError() {
+      const btn = document.getElementById('loginBtn');
+      const err = document.getElementById('errorMsg');
+      err.style.display = 'block';
+      err.textContent = '⚠ AUTHENTICATION FAILED — Invalid credentials';
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.textContent = 'AUTHENTICATE →';
+    }
+ 
+    // Enter key
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+  </script>
+</body>
+</html>
